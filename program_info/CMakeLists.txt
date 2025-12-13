@@ -8,7 +8,7 @@ if(UNIX)
     endif()
 endif()
 
-set(Launcher_CommonName "PrismLauncher")
+set(Launcher_CommonName "TruckLauncher")
 set(Launcher_DisplayName "Truck Launcher")
 
 set(Launcher_Name "${Launcher_CommonName}" PARENT_SCOPE)
