@@ -326,3 +326,43 @@ void HttpMetaCache::SaveNow()
         qCWarning(taskHttpMetaCacheLogC) << "Error writing cache:" << e.what();
     }
 }
+
+void HttpMetaCache::cleanupOldTruckPackCache(const QString& cachePath)
+{
+    if (cachePath.isEmpty()) {
+        qDebug() << "HttpMetaCache: No cache path provided for cleanup";
+        return;
+    }
+    
+    qDebug() << "HttpMetaCache: Cleaning up old truck pack cache file:" << cachePath;
+    
+    // Delete the physical file
+    QFile file(cachePath);
+    if (file.exists()) {
+        if (file.remove()) {
+            qDebug() << "HttpMetaCache: Successfully deleted old pack file:" << cachePath;
+        } else {
+            qWarning() << "HttpMetaCache: Failed to delete old pack file:" << cachePath;
+            return;
+        }
+    } else {
+        qDebug() << "HttpMetaCache: Old pack file does not exist (already deleted?):" << cachePath;
+        return;
+    }
+    
+    // Remove the entry from the cache map
+    // We need to find the entry that matches this full path
+    for (auto base_it = m_entries.begin(); base_it != m_entries.end(); ++base_it) {
+        auto& entry_map = base_it.value();
+        for (auto it = entry_map.entry_list.begin(); it != entry_map.entry_list.end(); ++it) {
+            if (it.value()->getFullPath() == cachePath) {
+                qDebug() << "HttpMetaCache: Removing cache entry for path:" << it.key();
+                entry_map.entry_list.erase(it);
+                SaveNow();
+                return;
+            }
+        }
+    }
+    
+    qDebug() << "HttpMetaCache: Cache entry not found in map (file was deleted anyway)";
+}

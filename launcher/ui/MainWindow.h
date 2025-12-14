@@ -78,8 +78,6 @@ class MainWindow : public QMainWindow {
 
     void checkInstancePathForProblems();
 
-    void updatesAllowedChanged(bool allowed);
-
     void processURLs(QList<QUrl> urls);
     
     void addInstance(const QString& url = QString(), const QMap<QString, QString>& extra_info = {});
@@ -127,8 +125,6 @@ class MainWindow : public QMainWindow {
     void on_actionViewSelectedInstFolder_triggered();
 
     void refreshInstances();
-
-    void checkForUpdates();
 
     void on_actionSettings_triggered();
 

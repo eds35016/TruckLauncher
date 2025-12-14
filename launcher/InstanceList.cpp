@@ -921,7 +921,7 @@ class InstanceStaging : public Task {
             auto importTask = dynamic_cast<InstanceImportTask*>(m_child.get());
             if (importTask && importTask->hasPendingTruckPackInfo()) {
                 // Apply truck pack info to the committed instance
-                m_parent->applyTruckPackInfo(m_child->name(), importTask->getPendingTruckPackName(), importTask->getPendingTruckPackVersion(), importTask->getPendingMaxMemAlloc());
+                m_parent->applyTruckPackInfo(m_child->name(), importTask->getPendingTruckPackName(), importTask->getPendingTruckPackVersion(), importTask->getPendingMaxMemAlloc(), importTask->getPendingCachePath());
             }
             emitSucceeded();
             return;
@@ -1042,16 +1042,19 @@ bool InstanceList::destroyStagingPath(const QString& keyPath)
     return FS::deletePath(keyPath);
 }
 
-void InstanceList::applyTruckPackInfo(const QString& instanceName, const QString& packName, const QString& packVersion, int maxMemAlloc)
+void InstanceList::applyTruckPackInfo(const QString& instanceName, const QString& packName, const QString& packVersion, int maxMemAlloc, const QString& cachePath)
 {
     qDebug() << "InstanceList::applyTruckPackInfo: Applying truck pack info to instance:" << instanceName;
     qDebug() << "  Pack Name:" << packName << "Pack Version:" << packVersion << "Max RAM:" << maxMemAlloc << "MB";
+    if (!cachePath.isEmpty()) {
+        qDebug() << "  Cache Path:" << cachePath;
+    }
     
     // Find the instance by name
     for (auto inst : m_instances) {
         if (inst->name() == instanceName) {
             qDebug() << "  Found matching instance, applying truck pack info...";
-            inst->setTruckPackInfo(packName, packVersion);
+            inst->setTruckPackInfo(packName, packVersion, cachePath);
             
             // Apply RAM setting if specified
             if (maxMemAlloc > 0) {

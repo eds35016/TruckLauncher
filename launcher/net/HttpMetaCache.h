@@ -114,6 +114,9 @@ class HttpMetaCache : public QObject {
     // evict selected entry from cache
     auto evictEntry(MetaEntryPtr entry) -> bool;
     void evictAll();
+    
+    // Remove old truck pack zip files from cache when a pack is updated
+    void cleanupOldTruckPackCache(const QString& cachePath);
 
     void addBase(QString base, QString base_root);
 

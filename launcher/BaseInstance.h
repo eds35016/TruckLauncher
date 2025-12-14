@@ -152,7 +152,8 @@ class BaseInstance : public QObject, public std::enable_shared_from_this<BaseIns
     bool isTruckPack() const;
     QString getTruckPackName() const;
     QString getTruckPackVersion() const;
-    void setTruckPackInfo(const QString& packName, const QString& version);
+    QString getTruckPackCachePath() const;
+    void setTruckPackInfo(const QString& packName, const QString& version, const QString& cachePath = QString());
     void clearTruckPackInfo();
 
     /// guess log level from a line of game log

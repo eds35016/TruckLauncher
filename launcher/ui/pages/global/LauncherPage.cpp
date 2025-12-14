@@ -52,7 +52,6 @@
 #include "settings/SettingsObject.h"
 #include "ui/themes/ITheme.h"
 #include "ui/themes/ThemeManager.h"
-#include "updater/ExternalUpdater.h"
 
 #include <QApplication>
 #include <QProcess>
@@ -77,7 +76,7 @@ LauncherPage::LauncherPage(QWidget* parent) : QWidget(parent), ui(new Ui::Launch
     m_languageModel = APPLICATION->translations();
     loadSettings();
 
-    ui->updateSettingsBox->setHidden(!APPLICATION->updater());
+    ui->updateSettingsBox->setHidden(true);
 
     connect(ui->fontSizeBox, QOverload<int>::of(&QSpinBox::valueChanged), this, &LauncherPage::refreshFontPreview);
     connect(ui->consoleFont, &QFontComboBox::currentFontChanged, this, &LauncherPage::refreshFontPreview);
@@ -203,11 +202,7 @@ void LauncherPage::applySettings()
 {
     auto s = APPLICATION->settings();
 
-    // Updates
-    if (APPLICATION->updater()) {
-        APPLICATION->updater()->setAutomaticallyChecksForUpdates(ui->autoUpdateCheckBox->isChecked());
-        APPLICATION->updater()->setUpdateCheckInterval(ui->updateIntervalSpinBox->value() * 3600);
-    }
+    // Updates (auto-updater is disabled)
 
     s->set("MenuBarInsteadOfToolBar", ui->preferMenuBarCheckBox->isChecked());
 
@@ -258,11 +253,7 @@ void LauncherPage::applySettings()
 void LauncherPage::loadSettings()
 {
     auto s = APPLICATION->settings();
-    // Updates
-    if (APPLICATION->updater()) {
-        ui->autoUpdateCheckBox->setChecked(APPLICATION->updater()->getAutomaticallyChecksForUpdates());
-        ui->updateIntervalSpinBox->setValue(APPLICATION->updater()->getUpdateCheckInterval() / 3600);
-    }
+    // Updates (auto-updater is disabled)
 
     // Toolbar/menu bar settings (not applicable if native menu bar is present)
     ui->toolsBox->setEnabled(!QMenuBar().isNativeMenuBar());

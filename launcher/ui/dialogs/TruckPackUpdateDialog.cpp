@@ -43,6 +43,7 @@ TruckPackUpdateDialog::TruckPackUpdateDialog(const QString& packName,
            "<p>Current version: <b>%2</b></p>"
            "<p>Latest version: <b>%3</b></p>"
            "<p>Would you like to update before launching?</p>"
+           "<p><b>WARNING: Updating will delete any single player world saves! Make sure to back them up before proceeding.</b></p>"
            "</body></html>")
             .arg(packName, currentVersion, latestVersion));
     messageLabel->setWordWrap(true);

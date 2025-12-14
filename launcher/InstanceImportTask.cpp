@@ -125,6 +125,12 @@ void InstanceImportTask::downloadFromUrl()
     auto entry = APPLICATION->metacache()->resolveEntry("general", path);
     entry->setStale(true);
     m_archivePath = entry->getFullPath();
+    
+    // Store the cache path if this is a truck pack
+    if (m_hasPendingTruckPackInfo) {
+        m_pendingCachePath = m_archivePath;
+        qDebug() << "InstanceImportTask: Storing cache path for truck pack:" << m_pendingCachePath;
+    }
 
     auto filesNetJob = makeShared<NetJob>(tr("Modpack download"), APPLICATION->network());
     filesNetJob->addNetAction(Net::ApiDownload::makeCached(m_sourceUrl, entry));

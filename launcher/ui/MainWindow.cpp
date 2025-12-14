@@ -87,7 +87,6 @@
 #include <net/NetJob.h>
 #include <news/NewsChecker.h>
 #include <tools/BaseProfiler.h>
-#include <updater/ExternalUpdater.h>
 #include "InstanceWindow.h"
 
 #include "ui/dialogs/AboutDialog.h"
@@ -197,7 +196,6 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         helpMenuButton = dynamic_cast<QToolButton*>(ui->mainToolBar->widgetForAction(ui->actionHelpButton));
         ui->actionHelpButton->setMenu(new QMenu(this));
         ui->actionHelpButton->menu()->addActions(ui->helpMenu->actions());
-        ui->actionHelpButton->menu()->removeAction(ui->actionCheckUpdate);
         helpMenuButton->setPopupMode(QToolButton::InstantPopup);
 
         auto accountMenuButton = dynamic_cast<QToolButton*>(ui->mainToolBar->widgetForAction(ui->actionAccountsButton));
@@ -216,8 +214,6 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         ui->actionMATRIX->setVisible(!BuildConfig.MATRIX_URL.isEmpty());
         ui->actionDISCORD->setVisible(!BuildConfig.DISCORD_URL.isEmpty());
         ui->actionREDDIT->setVisible(!BuildConfig.SUBREDDIT_URL.isEmpty());
-
-        ui->actionCheckUpdate->setVisible(APPLICATION->updaterEnabled());
 
 #ifndef Q_OS_MAC
         ui->actionAddToPATH->setVisible(false);
@@ -384,20 +380,6 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     {
         m_newsChecker->reloadNews();
         updateNewsLabel();
-    }
-
-    if (APPLICATION->updaterEnabled()) {
-        bool updatesAllowed = APPLICATION->updatesAreAllowed();
-        updatesAllowedChanged(updatesAllowed);
-
-        connect(ui->actionCheckUpdate, &QAction::triggered, this, &MainWindow::checkForUpdates);
-
-        // set up the updater object.
-        auto updater = APPLICATION->updater();
-
-        if (updater) {
-            connect(updater.get(), &ExternalUpdater::canCheckForUpdatesChanged, this, &MainWindow::updatesAllowedChanged);
-        }
     }
 
     connect(ui->actionUndoTrashInstance, &QAction::triggered, this, &MainWindow::undoTrashInstance);
@@ -688,14 +670,6 @@ void MainWindow::repopulateAccountsMenu()
     ui->accountsMenu->addAction(ui->actionManageAccounts);
 
     accountsButtonMenu->addActions(ui->accountsMenu->actions());
-}
-
-void MainWindow::updatesAllowedChanged(bool allowed)
-{
-    if (!APPLICATION->updaterEnabled()) {
-        return;
-    }
-    ui->actionCheckUpdate->setEnabled(allowed);
 }
 
 /*
@@ -1241,15 +1215,6 @@ void MainWindow::on_actionViewJavaFolder_triggered()
 void MainWindow::refreshInstances()
 {
     APPLICATION->instances()->loadList();
-}
-
-void MainWindow::checkForUpdates()
-{
-    if (APPLICATION->updaterEnabled()) {
-        APPLICATION->triggerUpdateCheck();
-    } else {
-        qWarning() << "Updater not set up. Cannot check for updates.";
-    }
 }
 
 void MainWindow::on_actionSettings_triggered()

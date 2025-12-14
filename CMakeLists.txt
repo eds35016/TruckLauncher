@@ -390,12 +390,9 @@ add_subdirectory(program_info)
 
 ####################################### Install layout #######################################
 
+# Auto-updater is permanently disabled
 set(Launcher_ENABLE_UPDATER NO)
 set(Launcher_BUILD_UPDATER NO)
-
-if (NOT APPLE AND (NOT Launcher_UPDATER_GITHUB_REPO STREQUAL "" AND NOT Launcher_BUILD_ARTIFACT STREQUAL ""))
-	set(Launcher_BUILD_UPDATER YES)
-endif()
 
 if(NOT (UNIX AND APPLE))
     # Install "portable.txt" if selected component is "portable"
@@ -432,9 +429,8 @@ if(UNIX AND APPLE)
     # directories to look for dependencies
     set(DIRS ${QT_LIBS_DIR} ${QT_LIBEXECS_DIR} ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY} ${MACOSX_SPARKLE_DIR})
 
-    if(NOT MACOSX_SPARKLE_UPDATE_PUBLIC_KEY STREQUAL "" AND NOT MACOSX_SPARKLE_UPDATE_FEED_URL STREQUAL "")
-        set(Launcher_ENABLE_UPDATER YES)
-    endif()
+    # Auto-updater is permanently disabled
+    # Sparkle framework updater is not used
 
     # install as bundle
     set(INSTALL_BUNDLE "full" CACHE STRING "Use fixup_bundle to bundle dependencies")

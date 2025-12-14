@@ -54,6 +54,7 @@ class InstanceImportTask : public InstanceTask {
     QString getPendingTruckPackName() const { return m_pendingTruckPackName; }
     QString getPendingTruckPackVersion() const { return m_pendingTruckPackVersion; }
     int getPendingMaxMemAlloc() const { return m_pendingMaxMemAlloc; }
+    QString getPendingCachePath() const { return m_pendingCachePath; }
 
    protected:
     //! Entry point for tasks.
@@ -91,6 +92,7 @@ class InstanceImportTask : public InstanceTask {
     QString m_pendingTruckPackName;
     QString m_pendingTruckPackVersion;
     int m_pendingMaxMemAlloc = -1;
+    QString m_pendingCachePath;
 
     // FIXME: nuke
     QWidget* m_parent;

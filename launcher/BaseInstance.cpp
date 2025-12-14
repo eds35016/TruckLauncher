@@ -108,6 +108,7 @@ BaseInstance::BaseInstance(SettingsObjectPtr globalSettings, SettingsObjectPtr s
     m_settings->registerSetting("TruckPack", false);
     m_settings->registerSetting("TruckPackName", "");
     m_settings->registerSetting("TruckPackVersion", "");
+    m_settings->registerSetting("TruckPackCachePath", "");
 
     m_settings->registerSetting("Profiler", "");
 }
@@ -204,11 +205,19 @@ QString BaseInstance::getTruckPackVersion() const
     return result;
 }
 
-void BaseInstance::setTruckPackInfo(const QString& packName, const QString& version)
+QString BaseInstance::getTruckPackCachePath() const
+{
+    return m_settings->get("TruckPackCachePath").toString();
+}
+
+void BaseInstance::setTruckPackInfo(const QString& packName, const QString& version, const QString& cachePath)
 {
     m_settings->set("TruckPack", true);
     m_settings->set("TruckPackName", packName);
     m_settings->set("TruckPackVersion", version);
+    if (!cachePath.isEmpty()) {
+        m_settings->set("TruckPackCachePath", cachePath);
+    }
 }
 
 void BaseInstance::clearTruckPackInfo()
@@ -216,6 +225,7 @@ void BaseInstance::clearTruckPackInfo()
     m_settings->set("TruckPack", false);
     m_settings->set("TruckPackName", "");
     m_settings->set("TruckPackVersion", "");
+    m_settings->set("TruckPackCachePath", "");
 }
 
 int BaseInstance::getConsoleMaxLines() const

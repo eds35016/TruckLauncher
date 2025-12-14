@@ -64,7 +64,6 @@ class AccountList;
 class IconList;
 class QNetworkAccessManager;
 class JavaInstallList;
-class ExternalUpdater;
 class BaseProfilerFactory;
 class BaseDetachedToolFactory;
 class TranslationsModel;
@@ -119,10 +118,6 @@ class Application : public QApplication {
 
     ThemeManager* themeManager() { return m_themeManager.get(); }
 
-    shared_qobject_ptr<ExternalUpdater> updater() { return m_updater; }
-
-    void triggerUpdateCheck();
-
     std::shared_ptr<TranslationsModel> translations();
 
     std::shared_ptr<JavaInstallList> javalist();
@@ -165,7 +160,7 @@ class Application : public QApplication {
     QString getUserAgent();
     QString getUserAgentUncached();
 
-    /// this is the root of the 'installation'. Used for automatic updates
+    /// this is the root of the 'installation'.
     const QString& root() { return m_rootPath; }
 
     /// the data path the application is using
@@ -191,9 +186,6 @@ class Application : public QApplication {
     bool updatesAreAllowed();
 
     void ShowGlobalSettings(class QWidget* parent, QString open_page = QString());
-
-    bool updaterEnabled();
-    QString updaterBinaryName();
 
     QUrl normalizeImportUrl(QString const& url);
 
@@ -244,7 +236,6 @@ class Application : public QApplication {
 
     shared_qobject_ptr<QNetworkAccessManager> m_network;
 
-    shared_qobject_ptr<ExternalUpdater> m_updater;
     shared_qobject_ptr<AccountList> m_accounts;
 
     shared_qobject_ptr<HttpMetaCache> m_metacache;

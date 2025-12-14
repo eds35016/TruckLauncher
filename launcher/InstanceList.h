@@ -141,7 +141,7 @@ class InstanceList : public QAbstractListModel {
     /**
      * Apply truck pack metadata to an instance by name
      */
-    void applyTruckPackInfo(const QString& instanceName, const QString& packName, const QString& packVersion, int maxMemAlloc = -1);
+    void applyTruckPackInfo(const QString& instanceName, const QString& packName, const QString& packVersion, int maxMemAlloc = -1, const QString& cachePath = QString());
 
     int getTotalPlayTime();
 

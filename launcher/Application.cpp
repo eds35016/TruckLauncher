@@ -114,8 +114,6 @@
 
 #include "java/JavaInstallList.h"
 
-#include "updater/ExternalUpdater.h"
-
 #include "tools/JProfiler.h"
 #include "tools/JVisualVM.h"
 #include "tools/MCEditTool.h"
@@ -149,14 +147,6 @@
 #include <sys/types.h>
 #endif
 
-#if defined(Q_OS_MAC)
-#if defined(SPARKLE_ENABLED)
-#include "updater/MacSparkleUpdater.h"
-#endif
-#else
-#include "updater/PrismExternalUpdater.h"
-#endif
-
 #if defined Q_OS_WIN32
 #include <windows.h>
 #include <QStyleHints>
@@ -188,34 +178,6 @@ void appDebugOutput(QtMsgType type, const QMessageLogContext& context, const QSt
 }
 
 }  // namespace
-
-std::tuple<QDateTime, QString, QString, QString, QString> read_lock_File(const QString& path)
-{
-    auto contents = QString(FS::read(path));
-    auto lines = contents.split('\n');
-
-    QDateTime timestamp;
-    QString from, to, target, data_path;
-    for (auto line : lines) {
-        auto index = line.indexOf("=");
-        if (index < 0)
-            continue;
-        auto left = line.left(index);
-        auto right = line.mid(index + 1);
-        if (left.toLower() == "timestamp") {
-            timestamp = QDateTime::fromString(right, Qt::ISODate);
-        } else if (left.toLower() == "from") {
-            from = right;
-        } else if (left.toLower() == "to") {
-            to = right;
-        } else if (left.toLower() == "target") {
-            target = right;
-        } else if (left.toLower() == "data_path") {
-            data_path = right;
-        }
-    }
-    return std::make_tuple(timestamp, from, to, target, data_path);
-}
 
 Application::Application(int& argc, char** argv) : QApplication(argc, argv)
 {
@@ -521,7 +483,6 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
         qDebug() << "Compiled for               : " << BuildConfig.systemID();
         qDebug() << "Compiled by                : " << BuildConfig.compilerID();
         qDebug() << "Build Artifact             : " << BuildConfig.BUILD_ARTIFACT;
-        qDebug() << "Updates Enabled           : " << (updaterEnabled() ? "Yes" : "No");
         if (adjustedBy.size()) {
             qDebug() << "Work dir before adjustment : " << origcwdPath;
             qDebug() << "Work dir after adjustment  : " << QDir::currentPath();
@@ -935,105 +896,6 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
 
     detectLibraries();
 
-    // check update locks
-    {
-        auto update_log_path = FS::PathCombine(m_dataPath, "logs", "prism_launcher_update.log");
-
-        auto update_lock = QFileInfo(FS::PathCombine(m_dataPath, ".prism_launcher_update.lock"));
-        if (update_lock.exists()) {
-            auto [timestamp, from, to, target, data_path] = read_lock_File(update_lock.absoluteFilePath());
-            auto infoMsg = tr("This installation has a update lock file present at: %1\n"
-                              "\n"
-                              "Timestamp: %2\n"
-                              "Updating from version %3 to %4\n"
-                              "Target install path: %5\n"
-                              "Data Path: %6"
-                              "\n"
-                              "This likely means that a update attempt failed. Please ensure your installation is in working order before "
-                              "proceeding.\n"
-                              "Check the Prism Launcher updater log at: \n"
-                              "%7\n"
-                              "for details on the last update attempt.\n"
-                              "\n"
-                              "To delete this lock and proceed select \"Ignore\" below.")
-                               .arg(update_lock.absoluteFilePath())
-                               .arg(timestamp.toString(Qt::ISODate), from, to, target, data_path)
-                               .arg(update_log_path);
-            auto msgBox = QMessageBox(QMessageBox::Warning, tr("Update In Progress"), infoMsg, QMessageBox::Ignore | QMessageBox::Abort);
-            msgBox.setDefaultButton(QMessageBox::Abort);
-            msgBox.setModal(true);
-            msgBox.setDetailedText(FS::read(update_log_path));
-            msgBox.setMinimumWidth(460);
-            msgBox.adjustSize();
-            auto res = msgBox.exec();
-            switch (res) {
-                case QMessageBox::Ignore: {
-                    FS::deletePath(update_lock.absoluteFilePath());
-                    break;
-                }
-                case QMessageBox::Abort:
-                    [[fallthrough]];
-                default: {
-                    qDebug() << "Exiting because update lockfile is present";
-                    QMetaObject::invokeMethod(this, []() { exit(1); }, Qt::QueuedConnection);
-                    return;
-                }
-            }
-        }
-
-        auto update_fail_marker = QFileInfo(FS::PathCombine(m_dataPath, ".prism_launcher_update.fail"));
-        if (update_fail_marker.exists()) {
-            auto infoMsg = tr("An update attempt failed\n"
-                              "\n"
-                              "Please ensure your installation is in working order before "
-                              "proceeding.\n"
-                              "Check the Prism Launcher updater log at: \n"
-                              "%1\n"
-                              "for details on the last update attempt.")
-                               .arg(update_log_path);
-            auto msgBox = QMessageBox(QMessageBox::Warning, tr("Update Failed"), infoMsg, QMessageBox::Ignore | QMessageBox::Abort);
-            msgBox.setDefaultButton(QMessageBox::Abort);
-            msgBox.setModal(true);
-            msgBox.setDetailedText(FS::read(update_log_path));
-            msgBox.setMinimumWidth(460);
-            msgBox.adjustSize();
-            auto res = msgBox.exec();
-            switch (res) {
-                case QMessageBox::Ignore: {
-                    FS::deletePath(update_fail_marker.absoluteFilePath());
-                    break;
-                }
-                case QMessageBox::Abort:
-                    [[fallthrough]];
-                default: {
-                    qDebug() << "Exiting because update lockfile is present";
-                    QMetaObject::invokeMethod(this, []() { exit(1); }, Qt::QueuedConnection);
-                    return;
-                }
-            }
-        }
-
-        auto update_success_marker = QFileInfo(FS::PathCombine(m_dataPath, ".prism_launcher_update.success"));
-        if (update_success_marker.exists()) {
-            auto infoMsg = tr("Update succeeded\n"
-                              "\n"
-                              "You are now running %1 .\n"
-                              "Check the Prism Launcher updater log at: \n"
-                              "%2\n"
-                              "for details.")
-                               .arg(BuildConfig.printableVersionString())
-                               .arg(update_log_path);
-            auto msgBox = new QMessageBox(QMessageBox::Information, tr("Update Succeeded"), infoMsg, QMessageBox::Ok);
-            msgBox->setDefaultButton(QMessageBox::Ok);
-            msgBox->setDetailedText(FS::read(update_log_path));
-            msgBox->setAttribute(Qt::WA_DeleteOnClose);
-            msgBox->setMinimumWidth(460);
-            msgBox->adjustSize();
-            msgBox->open();
-            FS::deletePath(update_success_marker.absoluteFilePath());
-        }
-    }
-
     // notify user if /tmp is mounted with `noexec` (#1693)
     QString jvmArgs = m_settings->get("JvmArgs").toString();
     if (jvmArgs.indexOf("java.io.tmpdir") == -1) { /* java.io.tmpdir is a valid workaround, so don't annoy */
@@ -1153,26 +1015,6 @@ bool Application::createSetupWizard()
     return wizardRequired || login;
 }
 
-bool Application::updaterEnabled()
-{
-#if defined(Q_OS_MAC)
-    return BuildConfig.UPDATER_ENABLED;
-#else
-    return BuildConfig.UPDATER_ENABLED && QFileInfo(FS::PathCombine(m_rootPath, updaterBinaryName())).isFile();
-#endif
-}
-
-QString Application::updaterBinaryName()
-{
-    auto exe_name = QStringLiteral("%1_updater").arg(BuildConfig.LAUNCHER_APP_BINARY_NAME);
-#if defined Q_OS_WIN32
-    exe_name.append(".exe");
-#else
-    exe_name.prepend("bin/");
-#endif
-    return exe_name;
-}
-
 bool Application::event(QEvent* event)
 {
 #ifdef Q_OS_MACOS
@@ -1252,19 +1094,6 @@ void Application::performMainStartupAction()
         // normal main window
         showMainWindow(false);
         qDebug() << "<> Main window shown.";
-    }
-
-    // initialize the updater
-    if (updaterEnabled()) {
-        qDebug() << "Initializing updater";
-#ifdef Q_OS_MAC
-#if defined(SPARKLE_ENABLED)
-        m_updater.reset(new MacSparkleUpdater());
-#endif
-#else
-        m_updater.reset(new PrismExternalUpdater(m_mainWindow, m_rootPath, m_dataPath));
-#endif
-        qDebug() << "<> Updater started.";
     }
 
     {  // delete instances tmp dirctory
@@ -1541,6 +1370,15 @@ void Application::updateTruckPack(QString instanceId, QString packUrl, QString p
     QString iconKey = instance->iconKey();
     QString instancePath = instance->instanceRoot();
     
+    // Get the old version and cache path for cleanup
+    QString oldVersion;
+    QString oldCachePath;
+    auto settings = instance->settings();
+    if (settings) {
+        oldVersion = settings->get("TruckPackVersion").toString();
+        oldCachePath = settings->get("TruckPackCachePath").toString();
+    }
+    
     // Preserve RAM setting if it was customized
     int currentMaxMemAlloc = -1;
     if (instance->settings()->get("OverrideMemory").toBool()) {
@@ -1549,7 +1387,8 @@ void Application::updateTruckPack(QString instanceId, QString packUrl, QString p
     }
     
     qDebug() << "Application::updateTruckPack: Preserving - Name:" << instanceName 
-             << "Group:" << instanceGroup << "Icon:" << iconKey;
+             << "Group:" << instanceGroup << "Icon:" << iconKey << "Old version:" << oldVersion 
+             << "Old cache path:" << oldCachePath;
     
     // Create a sequential task to delete old instance then download new one
     auto updateTask = new SequentialTask(tr("Updating %1").arg(instanceName));
@@ -1581,11 +1420,22 @@ void Application::updateTruckPack(QString instanceId, QString packUrl, QString p
     auto wrappedImportTask = instances()->wrapInstanceTask(importTask);
     updateTask->addTask(Task::Ptr(wrappedImportTask));
     
+    // Connect to cleanup old cache files after successful update
+    connect(updateTask, &Task::succeeded, this, [this, packName, oldVersion, oldCachePath]() {
+        if (!oldCachePath.isEmpty()) {
+            qDebug() << "Application::updateTruckPack: Cleaning up old cache file:" << oldCachePath;
+            metacache()->cleanupOldTruckPackCache(oldCachePath);
+        } else {
+            qDebug() << "Application::updateTruckPack: No cache path stored for old version" << oldVersion;
+        }
+    });
+    
     // Show progress dialog FIRST - before doing anything else
     if (m_mainWindow) {
         ProgressDialog* progressDialog = new ProgressDialog(m_mainWindow);
         progressDialog->setSkipButton(true, tr("Abort"));
         progressDialog->setAttribute(Qt::WA_DeleteOnClose);
+        progressDialog->setWindowFlags(progressDialog->windowFlags() | Qt::WindowStaysOnTopHint);
         
         // Show and ensure the dialog is fully visible BEFORE any other operations
         progressDialog->show();
@@ -1596,10 +1446,14 @@ void Application::updateTruckPack(QString instanceId, QString packUrl, QString p
         QCoreApplication::processEvents(QEventLoop::AllEvents);
         QCoreApplication::processEvents(QEventLoop::AllEvents);
         
-        // NOW delete from instance list (after dialog is visible)
-        instances()->deleteInstance(instanceId);
+        // Remove the instance from the group index metadata (fast, non-blocking)
+        QString cachedGroupId = instances()->getInstanceGroup(instanceId);
+        if (!cachedGroupId.isEmpty()) {
+            instances()->setInstanceGroup(instanceId, "");
+        }
         
         // Execute the task with the already-visible dialog
+        // The InstanceDeletionTask will handle the file deletion asynchronously
         progressDialog->execWithTask(updateTask);
     } else {
         instances()->deleteInstance(instanceId);
@@ -1691,7 +1545,6 @@ MainWindow* Application::showMainWindow(bool minimized)
         }
 
         m_mainWindow->checkInstancePathForProblems();
-        connect(this, &Application::updateAllowedChanged, m_mainWindow, &MainWindow::updatesAllowedChanged);
         connect(m_mainWindow, &MainWindow::isClosing, this, &Application::on_windowClose);
         m_openWindows++;
     }
@@ -2001,17 +1854,6 @@ bool Application::handleDataMigration(const QString& currentData,
         qWarning() << "<> Migration was skipped, due to existing data";
     }
     return true;
-}
-
-void Application::triggerUpdateCheck()
-{
-    if (m_updater) {
-        qDebug() << "Checking for updates.";
-        m_updater->setBetaAllowed(false);  // There are no other channels than stable
-        m_updater->checkForUpdates();
-    } else {
-        qDebug() << "Updater not available.";
-    }
 }
 
 QUrl Application::normalizeImportUrl(QString const& url)
